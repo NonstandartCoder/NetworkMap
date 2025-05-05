@@ -3,9 +3,6 @@ use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Slim\App;
 
-// Start output buffering to catch unintended output
-ob_start();
-
 return function (App $app) {
     $db = new Database();
 
@@ -38,7 +35,7 @@ return function (App $app) {
         $errors = [];
         $requiredFields = ['device_id', 'coordinate_x', 'coordinate_y', 'signal_quality'];
 
-        if (!is_array($data) || $data === null) {
+        if (!is_array($data)) {
             $errors[] = 'Invalid or missing request body';
         } else {
             foreach ($requiredFields as $field) {
@@ -87,7 +84,3 @@ return function (App $app) {
         }
     });
 };
-
-// Clear output buffer
-ob_end_clean();
-?>

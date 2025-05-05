@@ -1,6 +1,3 @@
-// Константы
-const TARGET_RADIUS_METERS = 30; // Фиксированный радиус в метрах
-
 // Инициализация карты
 const map = L.map('map').setView([55.751244, 37.618423], 15);
 map.attributionControl.setPrefix('<a href="https://openstreetmap.org/copyright" target="_blank">© OpenStreetMap</a>');
@@ -12,11 +9,33 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 let markersLayer = L.layerGroup().addTo(map);
 let selectedCoordinates = null;
 
+// Инициализация Toast
+const successToast = new bootstrap.Toast(document.getElementById('successToast'), { delay: 3000 });
+const mapClickToast = new bootstrap.Toast(document.getElementById('mapClickToast'), { delay: 5000 });
+
 // Цвет маркера в зависимости от качества сигнала
+// Генерация градиентного цвета от красного (0) до зелёного (10)
+// Генерация градиентного цвета: красный (0) → жёлтый (5) → зелёный (10)
 function getSignalColor(signal) {
-    if (signal >= 8) return '#00C851'; // Зеленый
-    if (signal >= 4) return '#ffbb33'; // Желтый
-    return '#ff4444'; // Красный
+    const ratio = Math.min(Math.max(signal, 0), 10) / 10; // Нормализация 0–10 к 0–1
+
+    let r, g, b;
+    if (ratio <= 0.5) {
+        // От красного (#FF0000) к жёлтому (#FFFF00)
+        const subRatio = ratio * 2; // Масштабируем 0–0.5 к 0–1
+        r = 255;
+        g = Math.round(255 * subRatio); // Зелёный растёт от 0 до 255
+        b = 0;
+    } else {
+        // От жёлтого (#FFFF00) к зелёному (#00FF00)
+        const subRatio = (ratio - 0.5) * 2; // Масштабируем 0.5–1 к 0–1
+        r = Math.round(255 * (1 - subRatio)); // Красный падает от 255 до 0
+        g = 255;
+        b = 0;
+    }
+
+    // Преобразуем в HEX
+    return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
 }
 
 // Загрузка и отображение устройств
@@ -57,7 +76,21 @@ function loadDevices() {
         .then(updateMarkers)
         .catch(error => {
             console.error('Error:', error);
-            alert('Failed to load devices');
+            // Показываем ошибку через Toast
+            const errorToast = new bootstrap.Toast(
+                Object.assign(document.createElement('div'), {
+                    className: 'toast align-items-center text-bg-danger border-0',
+                    role: 'alert',
+                    innerHTML: `
+                        <div class="d-flex">
+                            <div class="toast-body">Failed to load devices</div>
+                            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                        </div>`
+                }),
+                { delay: 5000 }
+            );
+            document.querySelector('.toast-container').appendChild(errorToast._element);
+            errorToast.show();
         });
 }
 
@@ -66,14 +99,15 @@ function showAddForm() {
     const modal = new bootstrap.Modal('#addModal');
     selectedCoordinates = null;
 
+    mapClickToast.show(); // Показываем Toast вместо alert
+
     map.once('click', e => {
         selectedCoordinates = e.latlng;
         document.querySelector('[name="coordinate_x"]').value = e.latlng.lng.toFixed(6);
         document.querySelector('[name="coordinate_y"]').value = e.latlng.lat.toFixed(6);
+        mapClickToast.hide(); // Скрываем Toast после клика
         modal.show();
     });
-
-    alert('Please click on the map to select device location');
 }
 
 // Сохранение нового устройства
@@ -82,10 +116,29 @@ function saveDevice() {
 
     const data = {
         device_id: formData.get('device_id'),
-        coordinate_x: formData.get('coordinate_x'),
-        coordinate_y: formData.get('coordinate_y'),
-        signal_quality: formData.get('signal_quality')
+        coordinate_x: parseFloat(formData.get('coordinate_x')),
+        coordinate_y: parseFloat(formData.get('coordinate_y')),
+        signal_quality: parseInt(formData.get('signal_quality'), 10)
     };
+
+    // Проверка координат
+    if (!data.coordinate_x || !data.coordinate_y) {
+        const errorToast = new bootstrap.Toast(
+            Object.assign(document.createElement('div'), {
+                className: 'toast align-items-center text-bg-danger border-0',
+                role: 'alert',
+                innerHTML: `
+                    <div class="d-flex">
+                        <div class="toast-body">Please select coordinates by clicking on the map.</div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>`
+            }),
+            { delay: 5000 }
+        );
+        document.querySelector('.toast-container').appendChild(errorToast._element);
+        errorToast.show();
+        return;
+    }
 
     fetch('http://localhost:8080/api/devices', {
         method: 'POST',
@@ -97,17 +150,29 @@ function saveDevice() {
         .then(response => {
             if (response.ok) return response.json();
             return response.json().then(err => {
-                throw new Error(err.errors?.join(', ') || 'Server error')
+                throw new Error(err.errors?.join(', ') || 'Server error');
             });
         })
         .then(() => {
             loadDevices();
             bootstrap.Modal.getInstance('#addModal').hide();
-            alert('Device added successfully!');
+            successToast.show(); // Показываем Toast вместо alert
         })
         .catch(error => {
             console.error('Error:', error);
-            alert(`Error: ${error.message}`);
+            const errorToast = new bootstrap.Toast(
+                Object.assign(document.createElement('div'), {
+                    className: 'toast align-items-center text-bg-danger border-0',
+                    role: 'alert',
+                    innerHTML: `
+                        <div class="d-flex">
+                            <div class="toast-body">Error: ${error.message}</div>
+                            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                        </div>`
+                }),
+            );
+            document.querySelector('.toast-container').appendChild(errorToast._element);
+            errorToast.show();
         });
 }
 
