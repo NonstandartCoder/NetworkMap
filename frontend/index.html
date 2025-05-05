@@ -4,50 +4,217 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NetworkMap</title>
-    <!-- Подключаем локальные файлы Leaflet -->
-    <link rel="stylesheet" href="/frontend/lib/leaflet/leaflet.css" />
+    <link rel="stylesheet" href="./lib/leaflet/leaflet.css">
+    <link rel="stylesheet" href="./lib/bootstrap/css/bootstrap.min.css">
     <style>
-        body {
-            margin: 0;
-            padding: 0;
-            font-family: Arial, sans-serif;
+        #map { height: calc(100vh - 56px); }
+        .navbar { margin-bottom: 0; }
+        .legend {
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 1px 5px rgba(0,0,0,0.4);
         }
-        #header {
-            background-color: #2c3e50;
-            color: white;
-            padding: 10px 15px;
-            text-align: center;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-            position: relative;
-            z-index: 1000;
-        }
-        #map {
-            height: calc(100vh - 44px);
-            width: 100vw;
-        }
+        .signal-low { color: #ff4444; }
+        .signal-medium { color: #ffbb33; }
+        .signal-high { color: #00C851; }
     </style>
 </head>
 <body>
-<!-- Шапка сайта -->
-<div id="header">
-    <h1>NetworkMap</h1>
-</div>
+<nav class="navbar navbar-dark bg-dark">
+    <div class="container">
+        <span class="navbar-brand mb-0 h1">NetworkMap</span>
+        <button class="btn btn-outline-light" onclick="showAddForm()">Add a device</button>
+    </div>
+</nav>
 
-<!-- Контейнер для карты -->
 <div id="map"></div>
 
-<!-- Подключаем локальный Leaflet JS -->
-<script src="/frontend/lib/leaflet/leaflet.js"></script>
+<!-- Add form -->
+<div class="modal fade" id="addModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">New device</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="deviceForm">
+                    <div class="mb-3">
+                        <label class="form-label">Device ID *</label>
+                        <input type="text" class="form-control" name="device_id" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Signal quality (0-10) *</label>
+                        <input type="number" class="form-control" name="signal_quality"
+                               min="0" max="10" step="1" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Coordinates</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" name="coordinate_x" readonly>
+                            <input type="text" class="form-control" name="coordinate_y" readonly>
+                        </div>
+                        <small class="text-muted">Click on the map to choose coordinates or type it in the form below.</small>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveDevice()">Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="./lib/leaflet/leaflet.js"></script>
+<script src="./lib/bootstrap/js/bootstrap.bundle.min.js"></script>
 
 <script>
-    // Инициализация карты с центром на России
-    const map = L.map('map').setView([62, 94], 3);
-
-    // Добавляем тайлы OpenStreetMap
+    // Map initialization
+    const map = L.map('map').setView([55.751244, 37.618423], 15);
+    // Adding href to tiles (OSM)
+    map.attributionControl.setPrefix('<a href="https://openstreetmap.org/copyright" target="_blank">© OpenStreetMap</a>');
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
         maxZoom: 19
     }).addTo(map);
+
+    let markersLayer = L.layerGroup().addTo(map);
+    let currentZoom = map.getZoom();
+
+    // Marker colour
+    function getSignalColor(signal) {
+        if(signal >= 8) return '#00C851'; // Green
+        if(signal >= 4) return '#ffbb33'; // Yellow
+        return '#ff4444'; // Red
+    }
+
+    // Getting circle size for scaling
+    function getMetersPerPixel() {
+        const center = map.getCenter();
+        const pointC = map.latLngToContainerPoint(center);
+        const pointX = [pointC.x + 1, pointC.y];
+        const latLngX = map.containerPointToLatLng(pointX);
+        return center.distanceTo(latLngX);
+    }
+
+    // Update radius of all circles.
+    function updateAllMarkersRadius() {
+        const metersPerPixel = getMetersPerPixel();
+        const targetRadiusMeters = 30;
+        const radiusPixels = targetRadiusMeters / metersPerPixel;
+
+        markersLayer.eachLayer(layer => {
+            if (layer instanceof L.CircleMarker) {
+                layer.setRadius(radiusPixels);
+            }
+        });
+    }
+
+    // Update markers
+    function updateMarkers(devices) {
+        markersLayer.clearLayers();
+        const radiusPixels = 30 / getMetersPerPixel();
+
+        devices.forEach(device => {
+            const marker = L.circleMarker([device.coordinate_y, device.coordinate_x], {
+                radius: radiusPixels, // Starting radius
+                color: getSignalColor(device.signal_quality),
+                fillColor: getSignalColor(device.signal_quality),
+                fillOpacity: 0.7,
+                interactive: true,
+            }).bindPopup(`
+                <b>${device.device_id}</b>
+                <div>Signal radius: 30 meters</div>
+                <b>${device.device_id}</b>
+                <div class="signal-${device.signal_quality > 7 ? 'high' : device.signal_quality > 3 ? 'medium' : 'low'}">
+                    Signal quality: ${device.signal_quality}/10
+                </div>
+                <div>Coordinates:
+                    ${Number(device.coordinate_x).toFixed(6)},
+                    ${Number(device.coordinate_y).toFixed(6)}
+                </div>
+            `);
+            markersLayer.addLayer(marker);
+        });
+    }
+    // Process events
+    function onZoomEnd() {
+        if (currentZoom !== map.getZoom()) {
+            currentZoom = map.getZoom();
+            updateAllMarkersRadius();
+        }
+    }
+
+    map.on({
+        'zoomend': onZoomEnd,
+        'moveend': updateAllMarkersRadius
+    });
+
+    // Upload device
+    function loadDevices() {
+        fetch('http://localhost:8080/api/devices')
+            .then(response => {
+                if(!response.ok) throw new Error('Network error');
+                return response.json();
+            })
+            .then(updateMarkers)
+            .catch(error => {
+                console.error('Ошибка:', error);
+                alert('There was a mistake while uploading a device');
+            });
+    }
+
+    // Add form
+    function showAddForm() {
+        const modal = new bootstrap.Modal('#addModal');
+        selectedCoordinates = null;
+
+        map.once('click', e => {
+            selectedCoordinates = e.latlng;
+            document.querySelector('[name="coordinate_x"]').value = e.latlng.lng.toFixed(6);
+            document.querySelector('[name="coordinate_y"]').value = e.latlng.lat.toFixed(6);
+            modal.show();
+        });
+
+        alert('Please click on the map to choose coordinates of the device.');
+    }
+
+    // Save device
+    function saveDevice() {
+        const formData = new FormData(document.getElementById('deviceForm'));
+
+        const data = {
+            device_id: formData.get('device_id'),
+            coordinate_x: formData.get('coordinate_x'),
+            coordinate_y: formData.get('coordinate_y'),
+            signal_quality: formData.get('signal_quality')
+        };
+
+        fetch('http://localhost:8080/api/devices', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        })
+            .then(response => {
+                if(response.ok) return response.json();
+                return response.json().then(err => { throw new Error(err.errors?.join(', ') || 'Server error') });
+            })
+            .then(() => {
+                loadDevices();
+                bootstrap.Modal.getInstance('#addModal').hide();
+                alert('Device has been added successfully!');
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert(`Error: ${error.message}`);
+            });
+    }
+
+    // Initialize devices
+    loadDevices();
 </script>
 </body>
 </html>

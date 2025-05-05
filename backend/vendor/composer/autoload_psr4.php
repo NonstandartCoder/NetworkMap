@@ -13,6 +13,9 @@ return array(
     'Psr\\Http\\Server\\' => array($vendorDir . '/psr/http-server-middleware/src', $vendorDir . '/psr/http-server-handler/src'),
     'Psr\\Http\\Message\\' => array($vendorDir . '/psr/http-factory/src', $vendorDir . '/psr/http-message/src'),
     'Psr\\Container\\' => array($vendorDir . '/psr/container/src'),
+    'Psr\\Cache\\' => array($vendorDir . '/psr/cache/src'),
     'Fig\\Http\\Message\\' => array($vendorDir . '/fig/http-message-util/src'),
     'FastRoute\\' => array($vendorDir . '/nikic/fast-route/src'),
+    'Doctrine\\Deprecations\\' => array($vendorDir . '/doctrine/deprecations/src'),
+    'Doctrine\\DBAL\\' => array($vendorDir . '/doctrine/dbal/src'),
 );
