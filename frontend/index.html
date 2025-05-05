@@ -1,24 +1,12 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NetworkMap</title>
     <link rel="stylesheet" href="./lib/leaflet/leaflet.css">
     <link rel="stylesheet" href="./lib/bootstrap/css/bootstrap.min.css">
-    <style>
-        #map { height: calc(100vh - 56px); }
-        .navbar { margin-bottom: 0; }
-        .legend {
-            background: white;
-            padding: 10px;
-            border-radius: 5px;
-            box-shadow: 0 1px 5px rgba(0,0,0,0.4);
-        }
-        .signal-low { color: #ff4444; }
-        .signal-medium { color: #ffbb33; }
-        .signal-high { color: #00C851; }
-    </style>
+    <link rel="stylesheet" href="./css/styles.css">
 </head>
 <body>
 <nav class="navbar navbar-dark bg-dark">
@@ -55,7 +43,7 @@
                             <input type="text" class="form-control" name="coordinate_x" readonly>
                             <input type="text" class="form-control" name="coordinate_y" readonly>
                         </div>
-                        <small class="text-muted">Click on the map to choose coordinates or type it in the form below.</small>
+                        <small class="text-muted">Click on the map to choose coordinates</small>
                     </div>
                 </form>
             </div>
@@ -69,152 +57,6 @@
 
 <script src="./lib/leaflet/leaflet.js"></script>
 <script src="./lib/bootstrap/js/bootstrap.bundle.min.js"></script>
-
-<script>
-    // Map initialization
-    const map = L.map('map').setView([55.751244, 37.618423], 15);
-    // Adding href to tiles (OSM)
-    map.attributionControl.setPrefix('<a href="https://openstreetmap.org/copyright" target="_blank">© OpenStreetMap</a>');
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19
-    }).addTo(map);
-
-    let markersLayer = L.layerGroup().addTo(map);
-    let currentZoom = map.getZoom();
-
-    // Marker colour
-    function getSignalColor(signal) {
-        if(signal >= 8) return '#00C851'; // Green
-        if(signal >= 4) return '#ffbb33'; // Yellow
-        return '#ff4444'; // Red
-    }
-
-    // Getting circle size for scaling
-    function getMetersPerPixel() {
-        const center = map.getCenter();
-        const pointC = map.latLngToContainerPoint(center);
-        const pointX = [pointC.x + 1, pointC.y];
-        const latLngX = map.containerPointToLatLng(pointX);
-        return center.distanceTo(latLngX);
-    }
-
-    // Update radius of all circles.
-    function updateAllMarkersRadius() {
-        const metersPerPixel = getMetersPerPixel();
-        const targetRadiusMeters = 30;
-        const radiusPixels = targetRadiusMeters / metersPerPixel;
-
-        markersLayer.eachLayer(layer => {
-            if (layer instanceof L.CircleMarker) {
-                layer.setRadius(radiusPixels);
-            }
-        });
-    }
-
-    // Update markers
-    function updateMarkers(devices) {
-        markersLayer.clearLayers();
-        const radiusPixels = 30 / getMetersPerPixel();
-
-        devices.forEach(device => {
-            const marker = L.circleMarker([device.coordinate_y, device.coordinate_x], {
-                radius: radiusPixels, // Starting radius
-                color: getSignalColor(device.signal_quality),
-                fillColor: getSignalColor(device.signal_quality),
-                fillOpacity: 0.7,
-                interactive: true,
-            }).bindPopup(`
-                <b>${device.device_id}</b>
-                <div>Signal radius: 30 meters</div>
-                <b>${device.device_id}</b>
-                <div class="signal-${device.signal_quality > 7 ? 'high' : device.signal_quality > 3 ? 'medium' : 'low'}">
-                    Signal quality: ${device.signal_quality}/10
-                </div>
-                <div>Coordinates:
-                    ${Number(device.coordinate_x).toFixed(6)},
-                    ${Number(device.coordinate_y).toFixed(6)}
-                </div>
-            `);
-            markersLayer.addLayer(marker);
-        });
-    }
-    // Process events
-    function onZoomEnd() {
-        if (currentZoom !== map.getZoom()) {
-            currentZoom = map.getZoom();
-            updateAllMarkersRadius();
-        }
-    }
-
-    map.on({
-        'zoomend': onZoomEnd,
-        'moveend': updateAllMarkersRadius
-    });
-
-    // Upload device
-    function loadDevices() {
-        fetch('http://localhost:8080/api/devices')
-            .then(response => {
-                if(!response.ok) throw new Error('Network error');
-                return response.json();
-            })
-            .then(updateMarkers)
-            .catch(error => {
-                console.error('Ошибка:', error);
-                alert('There was a mistake while uploading a device');
-            });
-    }
-
-    // Add form
-    function showAddForm() {
-        const modal = new bootstrap.Modal('#addModal');
-        selectedCoordinates = null;
-
-        map.once('click', e => {
-            selectedCoordinates = e.latlng;
-            document.querySelector('[name="coordinate_x"]').value = e.latlng.lng.toFixed(6);
-            document.querySelector('[name="coordinate_y"]').value = e.latlng.lat.toFixed(6);
-            modal.show();
-        });
-
-        alert('Please click on the map to choose coordinates of the device.');
-    }
-
-    // Save device
-    function saveDevice() {
-        const formData = new FormData(document.getElementById('deviceForm'));
-
-        const data = {
-            device_id: formData.get('device_id'),
-            coordinate_x: formData.get('coordinate_x'),
-            coordinate_y: formData.get('coordinate_y'),
-            signal_quality: formData.get('signal_quality')
-        };
-
-        fetch('http://localhost:8080/api/devices', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(data)
-        })
-            .then(response => {
-                if(response.ok) return response.json();
-                return response.json().then(err => { throw new Error(err.errors?.join(', ') || 'Server error') });
-            })
-            .then(() => {
-                loadDevices();
-                bootstrap.Modal.getInstance('#addModal').hide();
-                alert('Device has been added successfully!');
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert(`Error: ${error.message}`);
-            });
-    }
-
-    // Initialize devices
-    loadDevices();
-</script>
+<script src="./js/main_script.js"></script>
 </body>
 </html>
