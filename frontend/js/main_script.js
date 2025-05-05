@@ -14,7 +14,6 @@ const successToast = new bootstrap.Toast(document.getElementById('successToast')
 const mapClickToast = new bootstrap.Toast(document.getElementById('mapClickToast'), { delay: 5000 });
 
 // Цвет маркера в зависимости от качества сигнала
-// Генерация градиентного цвета от красного (0) до зелёного (10)
 // Генерация градиентного цвета: красный (0) → жёлтый (5) → зелёный (10)
 function getSignalColor(signal) {
     const ratio = Math.min(Math.max(signal, 0), 10) / 10; // Нормализация 0–10 к 0–1
@@ -109,13 +108,24 @@ function showAddForm() {
         modal.show();
     });
 }
-
+// Экранирование HTML-символов (аналог htmlspecialchars)
+function escapeHtml(text) {
+    if (!text) return '';
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    };
+    return text.replace(/[&<>"']/g, char => map[char]);
+}
 // Сохранение нового устройства
 function saveDevice() {
     const formData = new FormData(document.getElementById('deviceForm'));
 
     const data = {
-        device_id: formData.get('device_id'),
+        device_id: escapeHtml(formData.get('device_id')),
         coordinate_x: parseFloat(formData.get('coordinate_x')),
         coordinate_y: parseFloat(formData.get('coordinate_y')),
         signal_quality: parseInt(formData.get('signal_quality'), 10)
