@@ -12,7 +12,44 @@ const markersLayer = L.markerClusterGroup({
     maxClusterRadius: 100,
     disableClusteringAtZoom: 18,
     spiderfyOnMaxZoom: false,
-    chunkedLoading: true
+    chunkedLoading: true,
+
+    // Функция для создания иконки кластера
+    iconCreateFunction: function(cluster) {
+        const markers = cluster.getAllChildMarkers();
+        let totalSignal = 0;
+
+        // Считаем среднее значение качества сигнала
+        markers.forEach(marker => {
+            totalSignal += marker.options.deviceData.signal_quality;
+        });
+        const avgSignal = markers.length > 0 ? totalSignal / markers.length : 0;
+        const color = getSignalColor(avgSignal);
+
+        // Создаем кастомную иконку кластера
+        return L.divIcon({
+            className: 'signal-cluster',
+            iconSize: [40, 40],
+            html: `
+                <div style="
+                    background: ${color};
+                    width: 100%;
+                    height: 100%;
+                    border-radius: 50%;
+                    border: 2px solid white;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-weight: bold;
+                    color: white;
+                    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+                    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+                ">
+                    ${markers.length}
+                </div>
+            `
+        });
+    }
 }).addTo(map);
 
 let selectedCoordinates = null;
@@ -56,8 +93,10 @@ function createMarker(device) {
         iconSize: [24, 24]
     });
 
-    return L.marker([device.coordinate_y, device.coordinate_x], { icon })
-        .bindPopup(`
+    return L.marker([device.coordinate_y, device.coordinate_x], {
+        icon,
+        deviceData: device // Сохраняем данные устройства в маркере
+    }).bindPopup(`
             <b>${device.device_id}</b>
             <div class="signal-${device.signal_quality > 7 ? 'high' :
             device.signal_quality > 3 ? 'medium' : 'low'}">
