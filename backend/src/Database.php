@@ -41,4 +41,10 @@ class Database {
         ]);
         return $this->conn->lastInsertId();
     }
+
+    public function getDeviceById($id) {
+        $stmt = $this->conn->prepare("SELECT * FROM device_data WHERE id = ?");
+        $stmt->execute([$id]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
 }
