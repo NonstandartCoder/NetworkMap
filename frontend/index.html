@@ -40,15 +40,27 @@
                     <div class="mb-3">
                         <label class="form-label">Signal quality (0-10) *</label>
                         <input type="number" class="form-control" name="signal_quality"
-                               min="0" max="10" step="1" required>
+                               min="0" max="10" step="1" required
+                               oninput="validateSignalQuality(this)">
+                        <div class="invalid-feedback" id="signalQualityFeedback">
+                            Please insert a number from 0 to 10 representing signal quality
+                        </div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Coordinates</label>
                         <div class="input-group">
-                            <input type="number" class="form-control" name="coordinate_x" step="any" placeholder="Longitude" required>
-                            <input type="number" class="form-control" name="coordinate_y" step="any" placeholder="Latitude" required>
+                            <input type="number" class="form-control" name="coordinate_x" step="any"
+                                   placeholder="Longitude" required oninput="validateCoordinate(this, 'longitude')">
+                            <input type="number" class="form-control" name="coordinate_y" step="any"
+                                   placeholder="Latitude" required oninput="validateCoordinate(this, 'latitude')">
                         </div>
                         <small class="text-muted">Click on the map to select coordinates, then edit if needed</small>
+                        <div class="invalid-feedback" id="coordinateXFeedback">
+                            Longitude must be between -180 and 180
+                        </div>
+                        <div class="invalid-feedback" id="coordinateYFeedback">
+                            Latitude must be between -90 and 90
+                        </div>
                     </div>
                 </form>
             </div>

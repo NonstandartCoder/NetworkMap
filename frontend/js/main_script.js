@@ -12,7 +12,7 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 
 // Configure marker clustering with custom settings
 const markersLayer = L.markerClusterGroup({
-    maxClusterRadius: 100, // Pixels from cluster center to include markers
+    maxClusterRadius: 150, // Pixels from cluster center to include markers
     disableClusteringAtZoom: 18, // Disable clustering at this zoom level
     spiderfyOnMaxZoom: false, // Don't spiderfy when reaching max zoom
     chunkedLoading: true, // Split processing into chunks for better performance
@@ -199,17 +199,79 @@ function showAddForm() {
 }
 
 /**
+ * Validates signal quality input field
+ * @param {HTMLInputElement} input - The input element
+ */
+function validateSignalQuality(input) {
+    const value = parseInt(input.value, 10);
+    const isValid = !isNaN(value) && value >= 0 && value <= 10;
+
+    if (input.value && !isValid) {
+        input.classList.add('is-invalid');
+    } else {
+        input.classList.remove('is-invalid');
+    }
+}
+
+/**
+ * Validates coordinate input field
+ * @param {HTMLInputElement} input - The input element
+ * @param {string} type - 'latitude' or 'longitude'
+ */
+function validateCoordinate(input, type) {
+    const value = parseFloat(input.value);
+    let isValid = !isNaN(value);
+
+    if (type === 'longitude') {
+        isValid = isValid && value >= -180 && value <= 180;
+    } else { // latitude
+        isValid = isValid && value >= -90 && value <= 90;
+    }
+
+    if (input.value && !isValid) {
+        input.classList.add('is-invalid');
+    } else {
+        input.classList.remove('is-invalid');
+    }
+}
+
+/**
  * Saves new device to server and updates UI
  * @param {HTMLElement} button - The save button element
  */
 function saveDevice(button) {
     const form = document.getElementById('deviceForm');
     const formData = new FormData(form);
+
+    // Validate signal quality
+    const signalQuality = parseInt(formData.get('signal_quality'), 10);
+    if (isNaN(signalQuality) || signalQuality < 0 || signalQuality > 10) {
+        document.querySelector('[name="signal_quality"]').classList.add('is-invalid');
+        showErrorToast('Please insert a number from 0 to 10 representing signal quality');
+        return;
+    }
+
+    // Validate coordinates
+    const coordX = parseFloat(formData.get('coordinate_x'));
+    const coordY = parseFloat(formData.get('coordinate_y'));
+
+    if (isNaN(coordX) || coordX < -180 || coordX > 180) {
+        document.querySelector('[name="coordinate_x"]').classList.add('is-invalid');
+        showErrorToast('Longitude must be between -180 and 180');
+        return;
+    }
+
+    if (isNaN(coordY) || coordY < -90 || coordY > 90) {
+        document.querySelector('[name="coordinate_y"]').classList.add('is-invalid');
+        showErrorToast('Latitude must be between -90 and 90');
+        return;
+    }
+
     const data = {
         device_id: escapeHtml(formData.get('device_id')),
-        coordinate_x: parseFloat(formData.get('coordinate_x')),
-        coordinate_y: parseFloat(formData.get('coordinate_y')),
-        signal_quality: parseInt(formData.get('signal_quality'), 10)
+        coordinate_x: coordX,
+        coordinate_y: coordY,
+        signal_quality: signalQuality
     };
 
     // Validate coordinates before sending
