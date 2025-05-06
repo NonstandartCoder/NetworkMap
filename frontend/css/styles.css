@@ -1,26 +1,3 @@
 #map {
     height: calc(100vh - 56px);
 }
-
-.navbar {
-    margin-bottom: 0;
-}
-
-.legend {
-    background: white;
-    padding: 10px;
-    border-radius: 5px;
-    box-shadow: 0 1px 5px rgba(0,0,0,0.4);
-}
-
-.signal-low {
-    color: #ff4444;
-}
-
-.signal-medium {
-    color: #ffbb33;
-}
-
-.signal-high {
-    color: #00C851;
-}

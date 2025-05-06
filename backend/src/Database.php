@@ -6,7 +6,7 @@ class Database {
         $dbPath = __DIR__ . '..\\..\\data\\devices.db';
         $this->conn = new PDO("sqlite:$dbPath");
         $this->conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        // Создаём таблицу
+
         $this->conn->exec('
             CREATE TABLE IF NOT EXISTS device_data (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -16,7 +16,7 @@ class Database {
                 signal_quality INTEGER NOT NULL
             )
         ');
-        // Создаём индекс
+
         $this->conn->exec('CREATE INDEX IF NOT EXISTS idx_device_id ON device_data (device_id)');
     }
 
