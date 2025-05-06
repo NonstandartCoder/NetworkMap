@@ -4,8 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NetworkMap</title>
-    <link rel="stylesheet" href="./lib/leaflet/leaflet.css">
-    <link rel="stylesheet" href="./lib/bootstrap/css/bootstrap.min.css">
+    <!-- Include Leaflet CSS from node_modules -->
+    <link rel="stylesheet" href="node_modules/leaflet/dist/leaflet.css">
+    <!-- Include MarkerCluster CSS for clustering functionality -->
+    <link rel="stylesheet" href="node_modules/leaflet.markercluster/dist/MarkerCluster.css">
+    <link rel="stylesheet" href="node_modules/leaflet.markercluster/dist/MarkerCluster.Default.css">
+    <!-- Include Bootstrap CSS from node_modules -->
+    <link rel="stylesheet" href="node_modules/bootstrap/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="./css/styles.css">
 </head>
 <body>
@@ -43,13 +48,13 @@
                             <input type="number" class="form-control" name="coordinate_x" step="any" placeholder="Longitude" required>
                             <input type="number" class="form-control" name="coordinate_y" step="any" placeholder="Latitude" required>
                         </div>
-                        <small class="text-muted">You can edit coordinates if needed</small>
+                        <small class="text-muted">Click on the map to select coordinates, then edit if needed</small>
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="saveDevice()">Save</button>
+                <button type="button" class="btn btn-primary" onclick="saveDevice(this)">Save</button>
             </div>
         </div>
     </div>
@@ -75,8 +80,12 @@
     </div>
 </div>
 
-<script src="./lib/leaflet/leaflet.js"></script>
-<script src="./lib/bootstrap/js/bootstrap.bundle.min.js"></script>
+<!-- Include Leaflet JS from node_modules -->
+<script src="node_modules/leaflet/dist/leaflet.js"></script>
+<!-- Include MarkerCluster JS for clustering functionality -->
+<script src="node_modules/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
+<!-- Include Bootstrap JS from node_modules -->
+<script src="node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
 <script src="./js/main_script.js"></script>
 </body>
 </html>
