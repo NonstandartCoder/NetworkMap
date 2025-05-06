@@ -53,18 +53,12 @@ cd frontend
 npm install
 ```
 
-3. To run build:
-
-```bash
-npm run build
-```
-
 ## Running the Application
 
 ### You'll need to run both servers simultaneously:
 
 1. Start backend server (in backend directory):
-2. 
+
 ```bash
 php -S localhost:8080 -t classes
 ```
