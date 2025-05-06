@@ -71,10 +71,10 @@ return function (App $app) {
                 (int)$data['signal_quality']
             );
 
-            $response->getBody()->write(json_encode([
-                'id' => $deviceId,
-                'message' => 'Device added successfully'
-            ]));
+            // Retrieve the newly added device
+            $newDevice = $db->getDeviceById($deviceId);
+
+            $response->getBody()->write(json_encode($newDevice));
             return $response->withStatus(201);
         } catch (PDOException $e) {
             $response->getBody()->write(json_encode([
