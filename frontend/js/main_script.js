@@ -88,7 +88,7 @@ function loadDevices() {
                             <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
                         </div>`
                 }),
-                { delay: 1000 }
+                { delay: 5000 } // Toast disappears after 5 seconds
             );
             document.querySelector('.toast-container').appendChild(errorToast._element);
             errorToast.show();
@@ -150,7 +150,7 @@ function saveDevice() {
                         <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
                     </div>`
             }),
-            { delay: 1000 } // Toast disappears after 1 second
+            { delay: 5000 } // Toast disappears after 5 seconds
         );
         // Append the toast to the toast container and display it
         document.querySelector('.toast-container').appendChild(errorToast._element);
